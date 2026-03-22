@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Black Market - Лутаем Кэш</title>
+    <style>
+        body { background: #050505; color: #00ff00; font-family: 'Courier New', monospace; text-align: center; padding: 20px; }
+        .card { border: 2px solid #00ff00; padding: 20px; margin: 20px auto; max-width: 300px; box-shadow: 0 0 15px #00ff00; }
+        button { background: #00ff00; color: #000; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.3s; }
+        button:hover { background: #ff0000; color: #fff; box-shadow: 0 0 10px #ff0000; }
+        h1 { text-shadow: 2px 2px #ff0000; letter-spacing: 5px; }
+    </style>
+</head>
+<body>
+    <h1>DARK SHOP</h1>
+    <p>Выбирай товар, плати бабки и вали!</p>
+
+    <div class="card">
+        <h3>Приватный софт</h3>
+        <p>Цена: 100$</p>
+        <button onclick="buy('Soft', 100)">КУПИТЬ НАХУЙ</button>
+    </div>
+
+    <div class="card">
+        <h3>Схема на миллион</h3>
+        <p>Цена: 500$</p>
+        <button onclick="buy('Scheme', 500)">КУПИТЬ НАХУЙ</button>
+    </div>
+
+    <script>
+        async function buy(item, price) {
+            try {
+                // Стучимся к твоему серверу server.py
+                const response = await fetch(`/order?item=${item}&price=${price}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                alert('Заказ принят! Жди, скоро всё будет.');
+            } catch (err) {
+                alert('Ошибка! Видимо, сервер сдох.');
+            }
+        }
+    </script>
+</body>
+</html>
