@@ -5,24 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DEXTUF ADMIN</title>
     <style>
-        body { background: #0e0e0e; color: #fff; font-family: sans-serif; padding: 20px; }
-        input, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; box-sizing: border-box; }
-        input { background: #1a1a1a; color: #fff; }
-        button { background: #ff5000; color: white; font-weight: bold; border: none; cursor: pointer; }
-        .preview { background: #1a1a1a; padding: 15px; border-radius: 8px; margin-top: 20px; }
+        body { background: #000; color: #fff; font-family: sans-serif; padding: 20px; text-align: center; }
+        input { width: 100%; max-width: 300px; padding: 10px; margin: 10px 0; display: block; margin-left: auto; margin-right: auto; }
+        button { background: #ff5000; color: #fff; border: none; padding: 15px 30px; font-weight: bold; cursor: pointer; border-radius: 5px; }
     </style>
 </head>
 <body>
-    <h2>Добавить товар</h2>
-    <input type="text" id="emoji" placeholder="Иконка (например 👟)">
+    <h1>АДМИНКА DEXTUF</h1>
+    <input type="text" id="emoji" placeholder="Эмодзи (например 👕)">
     <input type="text" id="title" placeholder="Название товара">
-    <input type="text" id="price" placeholder="Цена (например 3,500₽)">
-    <button onclick="addProduct()">ОПУБЛИКОВАТЬ</button>
-
-    <div id="list" class="preview">
-        <h4>Текущие товары:</h4>
-        <div id="items"></div>
-    </div>
+    <input type="text" id="price" placeholder="Цена (например 2500₽)">
+    <button onclick="addProduct()">ДОБАВИТЬ ТОВАР</button>
 
     <script>
         async function addProduct() {
@@ -31,21 +24,20 @@
                 title: document.getElementById('title').value,
                 price: document.getElementById('price').value
             };
-            await fetch('/add-product', {
+            
+            if(!item.title || !item.price) return alert("Заполни поля!");
+
+            const res = await fetch('/add-product', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(item)
             });
-            alert('Товар добавлен!');
-            location.reload();
-        }
 
-        async function load() {
-            const res = await fetch('/get-products');
-            const data = await res.json();
-            document.getElementById('items').innerHTML = data.map(i => `<div>${i.emoji} ${i.title} - ${i.price}</div>`).join('');
+            if(res.ok) {
+                alert('Товар добавлен! Проверяй главную.');
+                location.reload();
+            }
         }
-        load();
     </script>
 </body>
 </html>
