@@ -13,10 +13,9 @@
 
         .container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
         
-        /* Сообщение когда товаров нет */
-        #empty-msg { grid-column: 1 / span 2; padding: 50px 20px; color: #555; font-style: italic; }
+        #empty-msg { grid-column: 1 / span 2; padding: 50px 20px; color: #555; font-style: italic; text-align: center; }
 
-        .product-card { background: var(--card-bg); border-radius: 8px; overflow: hidden; position: relative; display: none; }
+        .product-card { background: var(--card-bg); border-radius: 8px; overflow: hidden; position: relative; display: block; }
         .product-img { width: 100%; aspect-ratio: 1/1; background: #222; display: flex; align-items: center; justify-content: center; font-size: 40px; }
         
         .product-info { padding: 10px; text-align: left; }
@@ -56,50 +55,80 @@
     </div>
 
     <script>
-        let prod = "";
-        async function loadProducts() {
-    const res = await fetch('/get-products');
-    const products = await res.json();
-    const container = document.getElementById('products-container');
-    
-    if(products.length > 0) {
-        container.innerHTML = ''; // Убираем надпись "Витрина обновляется"
-        products.forEach(p => {
-            container.innerHTML += `
-                <div class="product-card" style="display: block;">
-                    <div class="product-img">${p.emoji}</div>
-                    <div class="product-info">
-                        <div class="product-title">${p.title}</div>
-                        <div class="price">${p.price}</div>
-                        <button class="buy-btn" onclick="openOrder('${p.title}')">КУПИТЬ</button>
-                    </div>
-                </div>
-            `;
-        });
-    }
-}
-loadProducts();
-        function openOrder(n) { prod = n; document.getElementById('p-name').innerText = n; document.getElementById('order-modal').style.display = 'flex'; }
-        function closeOrder() { document.getElementById('order-modal').style.display = 'none'; }
+        let selectedProduct = "";
 
+        // ФУНКЦИЯ 1: ЗАГРУЗКА ТОВАРОВ С СЕРВЕРА
+        async function loadProducts() {
+            try {
+                const res = await fetch('/get-products');
+                const products = await res.json();
+                const container = document.getElementById('products-container');
+                
+                if(products.length > 0) {
+                    container.innerHTML = ''; 
+                    products.forEach(p => {
+                        container.innerHTML += `
+                            <div class="product-card">
+                                <div class="product-img">${p.emoji}</div>
+                                <div class="product-info">
+                                    <div class="product-title">${p.title}</div>
+                                    <div class="price">${p.price}</div>
+                                    <button class="buy-btn" onclick="openOrder('${p.title}')">КУПИТЬ</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            } catch (e) {
+                console.error("Ошибка связи с сервером:", e);
+            }
+        }
+
+        // Запускаем загрузку сразу
+        loadProducts();
+
+        // ФУНКЦИЯ 2: МОДАЛЬНОЕ ОКНО
+        function openOrder(name) {
+            selectedProduct = name;
+            document.getElementById('p-name').innerText = name;
+            document.getElementById('order-modal').style.display = 'flex';
+        }
+
+        function closeOrder() {
+            document.getElementById('order-modal').style.display = 'none';
+        }
+
+        // ФУНКЦИЯ 3: ОТПРАВКА ЗАКАЗА В ТЕЛЕГРАМ
         async function sendOrder() {
             const orderData = {
-                product: prod,
+                product: selectedProduct,
                 fio: document.getElementById('fio').value,
                 phone: document.getElementById('phone').value,
                 address: document.getElementById('address').value,
                 email: document.getElementById('email').value
             };
-            if(!orderData.fio || !orderData.phone || !orderData.address) { alert("Заполни данные для доставки!"); return; }
+
+            if(!orderData.fio || !orderData.phone || !orderData.address) {
+                alert("Заполни данные для доставки!");
+                return;
+            }
+
             try {
-                const res = await fetch('https://streetwear-shop.onrender.com/order', {
+                const res = await fetch('/order', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(orderData)
                 });
-                if(res.ok) { alert("УСПЕШНО! Ждите сообщения."); closeOrder(); }
-                else { alert("Ошибка сервера"); }
-            } catch(e) { alert("Ошибка сети"); }
+                
+                if(res.ok) {
+                    alert("УСПЕШНО! Заказ принят.");
+                    closeOrder();
+                } else {
+                    alert("Ошибка при отправке заказа.");
+                }
+            } catch(e) {
+                alert("Ошибка сети. Проверь интернет.");
+            }
         }
     </script>
 </body>
