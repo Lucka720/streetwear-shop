@@ -6,17 +6,18 @@ import requests
 app = Flask(__name__)
 CORS(app)
 
-# ТВОИ ДАННЫЕ
-TOKEN = "ЗДЕСЬ_ТВОЙ_ТОКЕН"
-MY_ID = "ЗДЕСЬ_ТВОЙ_ID"
+# ТВОИ ДАННЫЕ (подставь свои из бота)
+TOKEN = "8280920495:AAE-KXGDd7wdT3fsxtqFOGBm0bjjF6B0zZw"
+MY_ID = "5929760309"
 
-# Список товаров (пока в памяти)
+# Список товаров
 products = []
 
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
 
+# ВОТ ЭТОТ КУСОК ОЖИВИТ ССЫЛКУ /admin
 @app.route('/admin')
 def admin_page():
     return send_from_directory('.', 'admin.html')
