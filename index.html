@@ -3,31 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TEMU DARK EDITION</title>
+    <title>DEXTUF SHOP</title>
     <style>
         :root { --accent: #ff5000; --bg: #0e0e0e; --card-bg: #1a1a1a; }
-        body { background-color: var(--bg); color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding-bottom: 50px; }
+        body { background-color: var(--bg); color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 50px; }
         
-        /* Хедер в стиле Temu */
         header { background: #111; padding: 15px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #333; text-align: center; }
         .search-bar { background: #222; padding: 8px; border-radius: 20px; color: #888; font-size: 0.9rem; margin-top: 10px; }
 
-        /* Сетка товаров */
         .container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
         
-        .product-card { background: var(--card-bg); border-radius: 8px; overflow: hidden; position: relative; }
+        /* Сообщение когда товаров нет */
+        #empty-msg { grid-column: 1 / span 2; padding: 50px 20px; color: #555; font-style: italic; }
+
+        .product-card { background: var(--card-bg); border-radius: 8px; overflow: hidden; position: relative; display: none; }
         .product-img { width: 100%; aspect-ratio: 1/1; background: #222; display: flex; align-items: center; justify-content: center; font-size: 40px; }
         
         .product-info { padding: 10px; text-align: left; }
         .product-title { font-size: 0.85rem; color: #ccc; margin: 5px 0; height: 34px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-        .price-row { display: flex; align-items: center; gap: 5px; }
         .price { color: #fff; font-size: 1.1rem; font-weight: bold; }
-        .old-price { color: #666; font-size: 0.8rem; text-decoration: line-through; }
-        .discount-tag { background: var(--accent); color: white; font-size: 0.7rem; padding: 2px 5px; border-radius: 3px; position: absolute; top: 5px; left: 5px; }
         
         button.buy-btn { background: var(--accent); color: white; border: none; width: 100%; padding: 10px; border-radius: 5px; font-weight: bold; margin-top: 10px; cursor: pointer; }
 
-        /* Модалка оформления */
         #order-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; }
         .modal-content { background: #1a1a1a; padding: 25px; border-radius: 15px; width: 90%; max-width: 400px; border: 1px solid #333; }
         input { width: 100%; padding: 12px; margin: 8px 0; background: #282828; border: 1px solid #444; color: #fff; border-radius: 8px; box-sizing: border-box; }
@@ -37,59 +34,12 @@
 <body>
 
     <header>
-        <div style="font-weight: bold; font-size: 1.2rem; color: var(--accent);">TEMU <span style="color: #fff;">DARK</span></div>
+        <div style="font-weight: bold; font-size: 1.4rem; color: var(--accent); letter-spacing: 1px;">DEXTUF <span style="color: #fff;">SHOP</span></div>
         <div class="search-bar">🔍 Поиск товаров...</div>
     </header>
 
-    <div class="container">
-        <div class="product-card">
-            <div class="discount-tag">-65%</div>
-            <div class="product-img">👟</div>
-            <div class="product-info">
-                <div class="product-title">Streetwear Кроссовки "Nocturnal" Limited Edition</div>
-                <div class="price-row">
-                    <span class="price">3,200₽</span>
-                    <span class="old-price">8,900₽</span>
-                </div>
-                <button class="buy-btn" onclick="openOrder('Кроссовки Nocturnal')">КУПИТЬ</button>
-            </div>
-        </div>
-
-        <div class="product-card">
-            <div class="discount-tag">-40%</div>
-            <div class="product-img">🧥</div>
-            <div class="product-info">
-                <div class="product-title">Oversize Бомбер "Cyber" Reflective</div>
-                <div class="price-row">
-                    <span class="price">5,100₽</span>
-                    <span class="old-price">12,000₽</span>
-                </div>
-                <button class="buy-btn" onclick="openOrder('Бомбер Cyber')">КУПИТЬ</button>
-            </div>
-        </div>
-
-        <div class="product-card">
-            <div class="product-img">🎒</div>
-            <div class="product-info">
-                <div class="product-title">Тактический рюкзак "Shadow"</div>
-                <div class="price-row">
-                    <span class="price">2,800₽</span>
-                </div>
-                <button class="buy-btn" onclick="openOrder('Рюкзак Shadow')">КУПИТЬ</button>
-            </div>
-        </div>
-
-        <div class="product-card">
-            <div class="discount-tag">HOT</div>
-            <div class="product-img">🧢</div>
-            <div class="product-info">
-                <div class="product-title">Кепка "Bones" Black on Black</div>
-                <div class="price-row">
-                    <span class="price">1,500₽</span>
-                </div>
-                <button class="buy-btn" onclick="openOrder('Кепка Bones')">КУПИТЬ</button>
-            </div>
-        </div>
+    <div class="container" id="products-container">
+        <div id="empty-msg">Витрина обновляется... Скоро здесь появятся новые поступления.</div>
     </div>
 
     <div id="order-modal">
@@ -97,12 +47,10 @@
             <span class="close-x" onclick="closeOrder()">&times;</span>
             <h3 style="margin: 0 0 15px 0;">Оформление заказа</h3>
             <p id="p-name" style="font-size: 0.9rem; color: var(--accent);"></p>
-            
             <input type="text" id="fio" placeholder="ФИО получателя">
             <input type="text" id="phone" placeholder="Телефон / Telegram">
             <input type="text" id="address" placeholder="Город, адрес, индекс">
             <input type="email" id="email" placeholder="Email (необязательно)">
-            
             <button class="buy-btn" onclick="sendOrder()">ПОДТВЕРДИТЬ</button>
         </div>
     </div>
@@ -120,12 +68,7 @@
                 address: document.getElementById('address').value,
                 email: document.getElementById('email').value
             };
-
-            if(!orderData.fio || !orderData.phone || !orderData.address) {
-                alert("Заполни данные для доставки!");
-                return;
-            }
-
+            if(!orderData.fio || !orderData.phone || !orderData.address) { alert("Заполни данные для доставки!"); return; }
             try {
                 const res = await fetch('https://streetwear-shop.onrender.com/order', {
                     method: 'POST',
