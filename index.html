@@ -57,6 +57,28 @@
 
     <script>
         let prod = "";
+        async function loadProducts() {
+    const res = await fetch('/get-products');
+    const products = await res.json();
+    const container = document.getElementById('products-container');
+    
+    if(products.length > 0) {
+        container.innerHTML = ''; // Убираем надпись "Витрина обновляется"
+        products.forEach(p => {
+            container.innerHTML += `
+                <div class="product-card" style="display: block;">
+                    <div class="product-img">${p.emoji}</div>
+                    <div class="product-info">
+                        <div class="product-title">${p.title}</div>
+                        <div class="price">${p.price}</div>
+                        <button class="buy-btn" onclick="openOrder('${p.title}')">КУПИТЬ</button>
+                    </div>
+                </div>
+            `;
+        });
+    }
+}
+loadProducts();
         function openOrder(n) { prod = n; document.getElementById('p-name').innerText = n; document.getElementById('order-modal').style.display = 'flex'; }
         function closeOrder() { document.getElementById('order-modal').style.display = 'none'; }
 
