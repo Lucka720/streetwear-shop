@@ -1,23 +1,41 @@
 import os
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 import requests
-from fastapi import FastAPI, Form
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 
-app = FastAPI()
+app = Flask(__name__)
+CORS(app)
 
-TELEGRAM_TOKEN = "8280920495:AAE-KXGDd7wdT3fsxtqFOGBm0bjjF6B0zZw"
-YOUR_CHAT_ID = "5929760309"
+# ТВОИ ДАННЫЕ (Убедись, что они верные!)
+TOKEN = "8280920495:AAE-KXGDd7wdT3fsxtqFOGBm0bjjF6B0zZw"
+MY_ID = "5929760309"
 
-@app.get("/")
-async def read_index():
-    return FileResponse('index.html')
-
-@app.post("/order")
-async def create_order(item: str = Form(...), phone: str = Form(...)):
-    message = f"🚀 **НОВЫЙ ЗАКАЗ!**\n\n👕 Товар: {item}\n📞 Телефон: {phone}"
+@app.route('/order', methods=['POST'])
+def order():
+    data = request.json
     
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    requests.post(url, json={"chat_id": YOUR_CHAT_ID, "text": message, "parse_mode": "Markdown"})
+    # Собираем красивое сообщение для Тебя
+    text = (
+        f"🛍 **НОВЫЙ ЗАКАЗ!**\n\n"
+        f"📦 **Товар:** {data.get('product')}\n"
+        f"👤 **ФИО:** {data.get('fio')}\n"
+        f"📞 **Связь:** {data.get('phone')}\n"
+        f"📍 **Адрес:** {data.get('address')}\n"
+        f"📧 **Email:** {data.get('email') if data.get('email') else 'Не указан'}"
+    )
     
-    return {"status": "success"}
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    payload = {"chat_id": MY_ID, "text": text, "parse_mode": "Markdown"}
+    
+    try:
+        response = requests.post(url, json=payload)
+        if response.ok:
+            return jsonify({"status": "success"}), 200
+        else:
+            return jsonify({"status": "error", "details": response.text}), 500
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
