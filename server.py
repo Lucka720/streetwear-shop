@@ -1,40 +1,50 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import requests
 
 app = Flask(__name__)
 CORS(app)
 
-# ТВОИ ДАННЫЕ (Убедись, что они верные!)
-TOKEN = "8280920495:AAE-KXGDd7wdT3fsxtqFOGBm0bjjF6B0zZw"
-MY_ID = "5929760309"
+# ТВОИ ДАННЫЕ
+TOKEN = "ЗДЕСЬ_ТВОЙ_ТОКЕН"
+MY_ID = "ЗДЕСЬ_ТВОЙ_ID"
+
+# Список товаров (пока в памяти)
+products = []
+
+@app.route('/')
+def index():
+    return send_from_directory('.', 'index.html')
+
+@app.route('/admin')
+def admin_page():
+    return send_from_directory('.', 'admin.html')
+
+@app.route('/get-products', methods=['GET'])
+def get_products():
+    return jsonify(products)
+
+@app.route('/add-product', methods=['POST'])
+def add_product():
+    data = request.json
+    products.append(data)
+    return jsonify({"status": "ok"})
 
 @app.route('/order', methods=['POST'])
 def order():
     data = request.json
-    
-    # Собираем красивое сообщение для Тебя
     text = (
         f"🛍 **НОВЫЙ ЗАКАЗ!**\n\n"
         f"📦 **Товар:** {data.get('product')}\n"
         f"👤 **ФИО:** {data.get('fio')}\n"
         f"📞 **Связь:** {data.get('phone')}\n"
         f"📍 **Адрес:** {data.get('address')}\n"
-        f"📧 **Email:** {data.get('email') if data.get('email') else 'Не указан'}"
+        f"📧 **Email:** {data.get('email', 'Не указан')}"
     )
-    
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    payload = {"chat_id": MY_ID, "text": text, "parse_mode": "Markdown"}
-    
-    try:
-        response = requests.post(url, json=payload)
-        if response.ok:
-            return jsonify({"status": "success"}), 200
-        else:
-            return jsonify({"status": "error", "details": response.text}), 500
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+    requests.post(url, json={"chat_id": MY_ID, "text": text, "parse_mode": "Markdown"})
+    return jsonify({"status": "success"}), 200
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
