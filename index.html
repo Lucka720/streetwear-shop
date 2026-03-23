@@ -3,42 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Black Market - Лутаем Кэш</title>
+    <title>DARK SHOP - Лутаем Кэш</title>
     <style>
-        body { background: #050505; color: #00ff00; font-family: 'Courier New', monospace; text-align: center; padding: 20px; }
-        .card { border: 2px solid #00ff00; padding: 20px; margin: 20px auto; max-width: 300px; box-shadow: 0 0 15px #00ff00; }
-        button { background: #00ff00; color: #000; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.3s; }
-        button:hover { background: #ff0000; color: #fff; box-shadow: 0 0 10px #ff0000; }
-        h1 { text-shadow: 2px 2px #ff0000; letter-spacing: 5px; }
+        body { background-color: #0a0a0a; color: #39FF14; font-family: 'Courier New', monospace; text-align: center; }
+        .container { display: flex; flex-wrap: wrap; justify-content: center; padding: 20px; }
+        .card { border: 2px solid #39FF14; margin: 15px; padding: 15px; width: 250px; box-shadow: 0 0 15px #39FF14; }
+        img { width: 100%; border-bottom: 2px solid #39FF14; margin-bottom: 10px; }
+        button { background: #1a1a1a; color: #39FF14; border: 1px solid #39FF14; padding: 10px 20px; cursor: pointer; width: 100%; font-weight: bold; }
+        button:hover { background: #39FF14; color: #000; }
+        h1 { text-shadow: 2px 2px #ff0000; font-size: 3em; }
     </style>
 </head>
 <body>
-    <h1>DARK SHOP</h1>
+    <h1>D A R K   S H O P</h1>
     <p>Выбирай товар, плати бабки и вали!</p>
 
-    <div class="card">
-        <h3>Приватный софт</h3>
-        <p>Цена: 100$</p>
-        <button onclick="buy('Soft', 100)">КУПИТЬ НАХУЙ</button>
-    </div>
-
-    <div class="card">
-        <h3>Схема на миллион</h3>
-        <p>Цена: 500$</p>
-        <button onclick="buy('Scheme', 500)">КУПИТЬ НАХУЙ</button>
+    <div class="container">
+        <div class="card">
+            <h3>Приватный софт</h3>
+            <p>Цена: 500$</p>
+            <button onclick="buyItem('Приватный софт')">КУПИТЬ НАХУЙ</button>
+        </div>
+        
+        <div class="card">
+            <h3>Стилер 2.0</h3>
+            <p>Цена: 200$</p>
+            <button onclick="buyItem('Стилер 2.0')">ВЗЯТЬ ПО ГНИЛОЙ</button>
+        </div>
     </div>
 
     <script>
-        async function buy(item, price) {
-            try {
-                // Стучимся к твоему серверу server.py
-                const response = await fetch(`/order?item=${item}&price=${price}`, {
-                    method: 'POST'
-                });
-                const data = await response.json();
-                alert('Заказ принят! Жди, скоро всё будет.');
-            } catch (err) {
-                alert('Ошибка! Видимо, сервер сдох.');
+        function buyItem(itemName) {
+            const phone = prompt("Введите ваш номер телефона/TG для связи:");
+            
+            if (phone) {
+                const formData = new FormData();
+                formData.append('item', itemName);
+                formData.append('phone', phone);
+
+                fetch('/order', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert("Заказ принят! Бот уже шепнул мне о тебе в телегу.");
+                    } else {
+                        alert("Ошибка сервера. Проверь логи на Render.");
+                    }
+                })
+                .catch(error => alert("Ошибка! Код не долетел до сервера."));
             }
         }
     </script>
