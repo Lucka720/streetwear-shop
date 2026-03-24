@@ -6,35 +6,67 @@
     <title>DEXTUF ADMIN</title>
     <style>
         body { background: #000; color: #fff; font-family: sans-serif; padding: 20px; text-align: center; }
-        input, textarea { width: 100%; max-width: 350px; padding: 10px; margin: 10px 0; display: block; margin-left: auto; margin-right: auto; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px; }
-        textarea { height: 80px; resize: none; }
-        button { background: #ff5000; color: #fff; border: none; padding: 15px 30px; font-weight: bold; cursor: pointer; border-radius: 5px; margin-top: 10px; }
+        input, textarea { width: 100%; max-width: 350px; padding: 12px; margin: 10px 0; display: block; margin-left: auto; margin-right: auto; background: #222; border: 1px solid #444; color: #fff; border-radius: 8px; box-sizing: border-box; }
+        button { background: #ff5000; color: #fff; border: none; padding: 15px 30px; font-weight: bold; cursor: pointer; border-radius: 8px; margin-top: 10px; width: 100%; max-width: 350px; }
+        .loading { display: none; color: #ffae00; margin-top: 10px; }
     </style>
 </head>
 <body>
     <h1>АДМИНКА DEXTUF</h1>
-    <input type="text" id="image" placeholder="Ссылка на фото (URL)">
+    <p>Выбери фото из галереи:</p>
+    <input type="file" id="fileInput" accept="image/*">
     <input type="text" id="title" placeholder="Название товара">
-    <textarea id="desc" placeholder="Описание товара (материал, размеры и т.д.)"></textarea>
+    <textarea id="desc" placeholder="Описание товара"></textarea>
     <input type="text" id="price" placeholder="Цена (например 2500₽)">
-    <button onclick="addProduct()">ДОБАВИТЬ ТОВАР</button>
+    
+    <div id="loader" class="loading">Загружаем фото в облако... подожди...</div>
+    <button id="addBtn" onclick="uploadAndAdd()">ОПУБЛИКОВАТЬ</button>
 
     <script>
-        async function addProduct() {
-            const item = {
-                image: document.getElementById('image').value,
-                title: document.getElementById('title').value,
-                desc: document.getElementById('desc').value,
-                price: document.getElementById('price').value
-            };
-            if(!item.title || !item.image) return alert("Заполни хотя бы название и фото!");
+        const IMGBB_KEY = "bfa785e76c7201f0ed8aaacf1a92c15c"; 
 
-            const res = await fetch('/add-product', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(item)
-            });
-            if(res.ok) { alert('Товар добавлен!'); location.reload(); }
+        async function uploadAndAdd() {
+            const fileInput = document.getElementById('fileInput');
+            const title = document.getElementById('title').value;
+            const desc = document.getElementById('desc').value;
+            const price = document.getElementById('price').value;
+            const btn = document.getElementById('addBtn');
+            const loader = document.getElementById('loader');
+
+            if (!fileInput.files[0] || !title) return alert("Выбери фото и введи название!");
+
+            btn.disabled = true;
+            loader.style.display = 'block';
+
+            try {
+                // 1. Грузим в ImgBB
+                const formData = new FormData();
+                formData.append("image", fileInput.files[0]);
+                
+                const imgRes = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, {
+                    method: "POST",
+                    body: formData
+                });
+                const imgData = await imgRes.json();
+                const directLink = imgData.data.url;
+
+                // 2. Отправляем данные на наш сервер
+                const res = await fetch('/add-product', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ image: directLink, title, desc, price })
+                });
+
+                if(res.ok) {
+                    alert('Товар опубликован навсегда!');
+                    location.reload();
+                }
+            } catch (err) {
+                alert('Ошибка загрузки! Проверь интернет или API ключ.');
+            } finally {
+                btn.disabled = false;
+                loader.style.display = 'none';
+            }
         }
     </script>
 </body>
