@@ -8,7 +8,8 @@ CORS(app)
 # --- НАСТРОЙКИ ---
 TOKEN_TG = "8280920495:AAE-KXGDd7wdT3fsxtqFOGBm0bjjF6B0zZw"
 MY_ID = 5929760309
-GH_TOKEN = "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"
+# Здесь мы убрали ghp_... и теперь берем его из настроек Render
+GH_TOKEN = os.environ.get("GH_TOKEN") 
 REPO = "Lucka720/streetwear-shop" 
 ADMIN_PASSWORD = "Qwerty58763" # Для удаления товаров
 
