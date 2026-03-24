@@ -6,9 +6,9 @@ import requests
 app = Flask(__name__)
 CORS(app)
 
-# ТВОИ ДАННЫЕ (подставь свой токен и ID)
-TOKEN = "8280920495:AAE-KXGDd7wdT3fsxtqFOGBm0bjjF6B0zZw"
-MY_ID = "5929760309"
+# ВСТАВЬ СВОИ ДАННЫЕ ИЗ БОТА
+TOKEN = "ЗДЕСЬ_ТОКЕН"
+MY_ID = "ЗДЕСЬ_ID"
 
 products = []
 
@@ -27,15 +27,15 @@ def get_products():
 @app.route('/add-product', methods=['POST'])
 def add_product():
     data = request.json
+    # Сохраняем товар (теперь там image вместо emoji)
     products.append(data)
     return jsonify({"status": "ok"})
 
 @app.route('/order', methods=['POST'])
 def order():
     data = request.json
-    text = f"🛍 ЗАКАЗ: {data.get('product')}\n👤 ФИО: {data.get('fio')}\n📞 Тел: {data.get('phone')}"
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    requests.post(url, json={"chat_id": MY_ID, "text": text})
+    text = f"🛍 ЗАКАЗ: {data.get('product')}\n👤 ФИО: {data.get('fio')}\n📞 Тел: {data.get('phone')}\n📍 Адрес: {data.get('address')}"
+    requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={"chat_id": MY_ID, "text": text})
     return jsonify({"status": "success"})
 
 if __name__ == '__main__':
