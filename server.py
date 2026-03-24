@@ -5,18 +5,17 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
+# ВСТАВЬ СВОИ ДАННЫЕ СЮДА
 TOKEN = "8280920495:AAE-KXGDd7wdT3fsxtqFOGBm0bjjF6B0zZw"
 MY_ID = "5929760309"
 DB_FILE = "products.json"
 
-# Загрузка данных из файла при старте
 def load_db():
     if os.path.exists(DB_FILE):
         with open(DB_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     return []
 
-# Сохранение в файл
 def save_db(data):
     with open(DB_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
@@ -36,14 +35,29 @@ def get_products(): return jsonify(products)
 def add_product():
     data = request.json
     products.append(data)
-    save_db(products) # Сохраняем в файл!
+    save_db(products)
     return jsonify({"status": "ok"})
 
 @app.route('/order', methods=['POST'])
 def order():
     d = request.json
-    msg = f"🛍 ЗАКАЗ: {d.get('product')}\n👤 {d.get('fio')}\n📍 {d.get('address')}"
-    requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={"chat_id": MY_ID, "text": msg})
+    # Собираем подробное сообщение для бота
+    text = (
+        f"🛍 **НОВЫЙ ЗАКАЗ**\n"
+        f"--------------------------\n"
+        f"📦 Товар: {d.get('product')}\n"
+        f"👤 ФИО: {d.get('fio')}\n"
+        f"📞 Тел/ТГ: {d.get('phone')}\n"
+        f"📍 Адрес/Индекс: {d.get('address')}\n"
+        f"📧 Email: {d.get('email') or 'не указан'}\n"
+        f"--------------------------"
+    )
+    
+    # Отправляем в Telegram
+    requests.post(
+        f"https://api.telegram.org/bot{TOKEN}/sendMessage", 
+        json={"chat_id": MY_ID, "text": text, "parse_mode": "Markdown"}
+    )
     return jsonify({"status": "success"})
 
 if __name__ == '__main__':
