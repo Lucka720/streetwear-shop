@@ -7,25 +7,34 @@
     <style>
         :root { --accent: #ff5000; --bg: #0e0e0e; }
         body { background: var(--bg); color: #fff; font-family: sans-serif; margin: 0; }
-        header { background: #111; padding: 15px; text-align: center; border-bottom: 1px solid #333; }
+        header { background: #111; padding: 15px; text-align: center; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 100; }
         .container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
-        .card { background: #1a1a1a; border-radius: 8px; overflow: hidden; }
+        .card { background: #1a1a1a; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
         .card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; cursor: pointer; }
-        .card-info { padding: 10px; }
-        .price { font-weight: bold; color: var(--accent); }
+        .card-info { padding: 10px; flex-grow: 1; }
+        .price { font-weight: bold; color: var(--accent); font-size: 1.1rem; }
+        .product-title { font-size: 0.85rem; color: #ccc; margin-bottom: 5px; }
 
-        /* ОКНО ТОВАРА (как на скрине №2) */
+        /* ОКНО КАРТОЧКИ ТОВАРА */
         #product-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; flex-direction: column; overflow-y: auto; }
-        .modal-img { width: 100%; max-height: 70vh; object-fit: contain; background: #000; }
-        .modal-details { padding: 20px; }
-        .modal-title { font-size: 1.5rem; font-weight: bold; margin-bottom: 10px; }
-        .modal-desc { color: #aaa; line-height: 1.4; margin-bottom: 20px; }
-        .buy-now-btn { background: var(--accent); color: #fff; border: none; width: 100%; padding: 15px; font-size: 1.2rem; font-weight: bold; border-radius: 10px; cursor: pointer; }
-        .close-btn { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.2); border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; }
+        .modal-img { width: 100%; max-height: 60vh; object-fit: contain; }
+        .modal-details { padding: 20px; background: #0e0e0e; border-radius: 20px 20px 0 0; margin-top: -20px; position: relative; }
+        .modal-title { font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; }
+        .modal-desc { color: #aaa; line-height: 1.5; margin-bottom: 25px; white-space: pre-wrap; }
+        .buy-now-btn { background: var(--accent); color: #fff; border: none; width: 100%; padding: 18px; font-size: 1.1rem; font-weight: bold; border-radius: 12px; cursor: pointer; }
+        .close-btn { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 24px; z-index: 2100; }
+
+        /* ОКНО ОФОРМЛЕНИЯ ЗАКАЗА (КАК НА СКРИНЕ №2) */
+        #order-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 3000; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+        .order-content { background: #1c1c1c; padding: 25px; border-radius: 20px; width: 100%; max-width: 400px; position: relative; }
+        .order-content h2 { margin: 0 0 5px 0; font-size: 1.3rem; }
+        .order-content p { color: var(--accent); margin: 0 0 20px 0; font-size: 0.9rem; }
+        .order-content input { width: 100%; padding: 15px; margin-bottom: 12px; background: #2a2a2a; border: 1px solid #333; color: #fff; border-radius: 10px; box-sizing: border-box; font-size: 1rem; }
+        .confirm-btn { background: var(--accent); color: #fff; border: none; width: 100%; padding: 15px; font-size: 1.1rem; font-weight: bold; border-radius: 10px; cursor: pointer; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <header><div style="color:var(--accent); font-weight:bold; font-size:1.5rem;">DEXTUF</div></header>
+    <header><div style="color:var(--accent); font-weight:bold; font-size:1.5rem; letter-spacing: 2px;">DEXTUF</div></header>
     <div class="container" id="list"></div>
 
     <div id="product-modal">
@@ -33,9 +42,22 @@
         <img id="m-img" class="modal-img">
         <div class="modal-details">
             <div id="m-title" class="modal-title"></div>
-            <div id="m-price" class="price" style="font-size: 1.3rem; margin-bottom: 10px;"></div>
+            <div id="m-price" class="price" style="font-size: 1.4rem; margin-bottom: 15px;"></div>
             <div id="m-desc" class="modal-desc"></div>
-            <button class="buy-now-btn" onclick="openOrder()">ВЫБРАТЬ ВАРИАНТ</button>
+            <button class="buy-now-btn" onclick="showOrderForm()">ВЫБРАТЬ ВАРИАНТ</button>
+        </div>
+    </div>
+
+    <div id="order-modal">
+        <div class="order-content">
+            <div style="position:absolute; top:15px; right:15px; cursor:pointer; color:#666;" onclick="closeOrderForm()">✕</div>
+            <h2>Оформление заказа</h2>
+            <p id="order-product-name"></p>
+            <input type="text" id="fio" placeholder="ФИО получателя">
+            <input type="text" id="phone" placeholder="Телефон / Telegram">
+            <input type="text" id="address" placeholder="Город, адрес, индекс">
+            <input type="text" id="email" placeholder="Email (необязательно)">
+            <button class="confirm-btn" onclick="sendOrder()">ПОДТВЕРДИТЬ</button>
         </div>
     </div>
 
@@ -48,37 +70,57 @@
             const list = document.getElementById('list');
             list.innerHTML = '';
             products.forEach(p => {
+                const data = encodeURIComponent(JSON.stringify(p));
                 list.innerHTML += `
                     <div class="card">
-                        <img src="${p.image}" onclick="openProduct(${JSON.stringify(p).replace(/"/g, '&quot;')})">
+                        <img src="${p.image}" onclick="openProduct('${data}')">
                         <div class="card-info">
-                            <div style="font-size:0.9rem; margin-bottom:5px;">${p.title}</div>
+                            <div class="product-title">${p.title}</div>
                             <div class="price">${p.price}</div>
                         </div>
                     </div>`;
             });
         }
 
-        function openProduct(p) {
-            currentItem = p;
-            document.getElementById('m-img').src = p.image;
-            document.getElementById('m-title').innerText = p.title;
-            document.getElementById('m-price').innerText = p.price;
-            document.getElementById('m-desc').innerText = p.desc || "Описание отсутствует";
+        function openProduct(data) {
+            currentItem = JSON.parse(decodeURIComponent(data));
+            document.getElementById('m-img').src = currentItem.image;
+            document.getElementById('m-title').innerText = currentItem.title;
+            document.getElementById('m-price').innerText = currentItem.price;
+            document.getElementById('m-desc').innerText = currentItem.desc || "";
             document.getElementById('product-modal').style.display = 'flex';
         }
 
         function closeProduct() { document.getElementById('product-modal').style.display = 'none'; }
-        
-        function openOrder() {
-            let name = prompt("Введите ваше ФИО и телефон для заказа:");
-            if(name) {
-                fetch('/order', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ product: currentItem.title, fio: name, phone: "через prompt" })
-                });
-                alert("Заказ принят! Менеджер свяжется с вами.");
+
+        function showOrderForm() {
+            document.getElementById('order-product-name').innerText = currentItem.title;
+            document.getElementById('order-modal').style.display = 'flex';
+        }
+
+        function closeOrderForm() { document.getElementById('order-modal').style.display = 'none'; }
+
+        async function sendOrder() {
+            const data = {
+                product: currentItem.title,
+                fio: document.getElementById('fio').value,
+                phone: document.getElementById('phone').value,
+                address: document.getElementById('address').value,
+                email: document.getElementById('email').value
+            };
+
+            if(!data.fio || !data.phone || !data.address) return alert("Заполни все основные поля!");
+
+            const res = await fetch('/order', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+
+            if(res.ok) {
+                alert("Заказ принят! Скоро свяжемся.");
+                closeOrderForm();
+                closeProduct();
             }
         }
         load();
