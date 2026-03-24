@@ -24,7 +24,7 @@
         .buy-now-btn { background: var(--accent); color: #fff; border: none; width: 100%; padding: 18px; font-size: 1.1rem; font-weight: bold; border-radius: 12px; cursor: pointer; }
         .close-btn { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 24px; z-index: 2100; }
 
-        /* ОКНО ОФОРМЛЕНИЯ ЗАКАЗА (КАК НА СКРИНЕ №2) */
+        /* ОКНО ОФОРМЛЕНИЯ ЗАКАЗА */
         #order-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 3000; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
         .order-content { background: #1c1c1c; padding: 25px; border-radius: 20px; width: 100%; max-width: 400px; position: relative; }
         .order-content h2 { margin: 0 0 5px 0; font-size: 1.3rem; }
@@ -57,26 +57,48 @@
             <input type="text" id="phone" placeholder="Телефон / Telegram">
             <input type="text" id="address" placeholder="Город, адрес, индекс">
             <input type="text" id="email" placeholder="Email (необязательно)">
-            <button class="confirm-btn" onclick="sendOrder()">ПОДТВЕРДИТЬ</button>
+            <button class="confirm-btn" onclick="sendOrder()">ОПЛАТИТЬ</button>
         </div>
     </div>
 
     <script>
         let currentItem = null;
+        let allProducts = [];
+        let userCurrency = 'USD';
+        let exchangeRate = 1;
+
+        async function detectCurrency() {
+            try {
+                const geoRes = await fetch('https://ipapi.co/json/');
+                const geoData = await geoRes.json();
+                if (geoData.country_code === 'CZ') userCurrency = 'CZK';
+                else if (['DE', 'FR', 'ES', 'IT', 'SK', 'AT', 'BE'].includes(geoData.country_code)) userCurrency = 'EUR';
+                
+                const rateRes = await fetch('https://api.exchangerate-api.v4/latest/USD');
+                const rateData = await rateRes.json();
+                exchangeRate = rateData.rates[userCurrency] || 1;
+            } catch (e) { console.log("Currency detect error"); }
+            load();
+        }
 
         async function load() {
             const res = await fetch('/get-products');
-            const products = await res.json();
+            allProducts = await res.json();
+            renderProducts();
+        }
+
+        function renderProducts() {
             const list = document.getElementById('list');
             list.innerHTML = '';
-            products.forEach(p => {
+            allProducts.forEach(p => {
+                const convertedPrice = (parseFloat(p.price) * exchangeRate).toFixed(0);
                 const data = encodeURIComponent(JSON.stringify(p));
                 list.innerHTML += `
                     <div class="card">
                         <img src="${p.image}" onclick="openProduct('${data}')">
                         <div class="card-info">
                             <div class="product-title">${p.title}</div>
-                            <div class="price">${p.price}</div>
+                            <div class="price">${convertedPrice} ${userCurrency}</div>
                         </div>
                     </div>`;
             });
@@ -84,9 +106,10 @@
 
         function openProduct(data) {
             currentItem = JSON.parse(decodeURIComponent(data));
+            const convertedPrice = (parseFloat(currentItem.price) * exchangeRate).toFixed(0);
             document.getElementById('m-img').src = currentItem.image;
             document.getElementById('m-title').innerText = currentItem.title;
-            document.getElementById('m-price').innerText = currentItem.price;
+            document.getElementById('m-price').innerText = `${convertedPrice} ${userCurrency}`;
             document.getElementById('m-desc').innerText = currentItem.desc || "";
             document.getElementById('product-modal').style.display = 'flex';
         }
@@ -101,6 +124,7 @@
         function closeOrderForm() { document.getElementById('order-modal').style.display = 'none'; }
 
         async function sendOrder() {
+            const paypalEmail = "didenko.com.ua@gmail.com"; // ВПИШИ СВОЙ PAYPAL
             const data = {
                 product: currentItem.title,
                 fio: document.getElementById('fio').value,
@@ -111,19 +135,21 @@
 
             if(!data.fio || !data.phone || !data.address) return alert("Заполни все основные поля!");
 
-            const res = await fetch('/order', {
+            // Отправляем данные в ТГ бот
+            await fetch('/order', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(data)
             });
 
-            if(res.ok) {
-                alert("Заказ принят! Скоро свяжемся.");
-                closeOrderForm();
-                closeProduct();
-            }
+            // Формируем оплату
+            const finalPrice = (parseFloat(currentItem.price) * exchangeRate).toFixed(2);
+            const paypalUrl = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${paypalEmail}&item_name=${encodeURIComponent(data.product)}&amount=${finalPrice}&currency_code=${userCurrency}`;
+            
+            window.location.href = paypalUrl;
         }
-        load();
+
+        detectCurrency();
     </script>
 </body>
 </html>
