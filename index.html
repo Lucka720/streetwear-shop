@@ -5,71 +5,83 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DEXTUF SHOP</title>
     <style>
-        :root { --accent: #ff5000; --bg: #0e0e0e; --card-bg: #1a1a1a; }
-        body { background-color: var(--bg); color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 50px; }
-        header { background: #111; padding: 15px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #333; text-align: center; }
+        :root { --accent: #ff5000; --bg: #0e0e0e; }
+        body { background: var(--bg); color: #fff; font-family: sans-serif; margin: 0; }
+        header { background: #111; padding: 15px; text-align: center; border-bottom: 1px solid #333; }
         .container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
-        .product-card { background: var(--card-bg); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
-        .product-img-container { width: 100%; aspect-ratio: 1/1; background: #222; overflow: hidden; }
-        .product-img-container img { width: 100%; height: 100%; object-fit: cover; }
-        .product-info { padding: 10px; flex-grow: 1; }
-        .product-title { font-size: 0.85rem; color: #ccc; height: 34px; overflow: hidden; margin-bottom: 5px; }
-        .price { color: #fff; font-size: 1.1rem; font-weight: bold; }
-        .buy-btn { background: var(--accent); color: white; border: none; width: 100%; padding: 10px; border-radius: 5px; font-weight: bold; margin-top: 10px; cursor: pointer; }
-        #order-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-content { background: #1a1a1a; padding: 20px; border-radius: 15px; width: 90%; max-width: 350px; }
-        input { width: 100%; padding: 10px; margin: 10px 0; background: #222; border: 1px solid #444; color: #fff; box-sizing: border-box; }
+        .card { background: #1a1a1a; border-radius: 8px; overflow: hidden; }
+        .card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; cursor: pointer; }
+        .card-info { padding: 10px; }
+        .price { font-weight: bold; color: var(--accent); }
+
+        /* ОКНО ТОВАРА (как на скрине №2) */
+        #product-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; flex-direction: column; overflow-y: auto; }
+        .modal-img { width: 100%; max-height: 70vh; object-fit: contain; background: #000; }
+        .modal-details { padding: 20px; }
+        .modal-title { font-size: 1.5rem; font-weight: bold; margin-bottom: 10px; }
+        .modal-desc { color: #aaa; line-height: 1.4; margin-bottom: 20px; }
+        .buy-now-btn { background: var(--accent); color: #fff; border: none; width: 100%; padding: 15px; font-size: 1.2rem; font-weight: bold; border-radius: 10px; cursor: pointer; }
+        .close-btn { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.2); border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; }
     </style>
 </head>
 <body>
-    <header><div style="font-weight: bold; font-size: 1.4rem; color: var(--accent);">DEXTUF SHOP</div></header>
-    <div class="container" id="products-container"></div>
+    <header><div style="color:var(--accent); font-weight:bold; font-size:1.5rem;">DEXTUF</div></header>
+    <div class="container" id="list"></div>
 
-    <div id="order-modal">
-        <div class="modal-content">
-            <h3 id="p-name"></h3>
-            <input type="text" id="fio" placeholder="ФИО">
-            <input type="text" id="phone" placeholder="Telegram / Телефон">
-            <input type="text" id="address" placeholder="Адрес доставки">
-            <button class="buy-btn" onclick="sendOrder()">ОФОРМИТЬ</button>
-            <button style="background:none; color:#666; border:none; margin-top:10px; width:100%;" onclick="closeOrder()">Отмена</button>
+    <div id="product-modal">
+        <div class="close-btn" onclick="closeProduct()">✕</div>
+        <img id="m-img" class="modal-img">
+        <div class="modal-details">
+            <div id="m-title" class="modal-title"></div>
+            <div id="m-price" class="price" style="font-size: 1.3rem; margin-bottom: 10px;"></div>
+            <div id="m-desc" class="modal-desc"></div>
+            <button class="buy-now-btn" onclick="openOrder()">ВЫБРАТЬ ВАРИАНТ</button>
         </div>
     </div>
 
     <script>
-        let selectedProduct = "";
-        async function loadProducts() {
-            try {
-                const res = await fetch('/get-products');
-                const products = await res.json();
-                const container = document.getElementById('products-container');
-                container.innerHTML = '';
-                products.forEach(p => {
-                    container.innerHTML += `
-                        <div class="product-card">
-                            <div class="product-img-container"><img src="${p.image}"></div>
-                            <div class="product-info">
-                                <div class="product-title">${p.title}</div>
-                                <div class="price">${p.price}</div>
-                                <button class="buy-btn" onclick="openOrder('${p.title}')">КУПИТЬ</button>
-                            </div>
-                        </div>`;
+        let currentItem = null;
+
+        async function load() {
+            const res = await fetch('/get-products');
+            const products = await res.json();
+            const list = document.getElementById('list');
+            list.innerHTML = '';
+            products.forEach(p => {
+                list.innerHTML += `
+                    <div class="card">
+                        <img src="${p.image}" onclick="openProduct(${JSON.stringify(p).replace(/"/g, '&quot;')})">
+                        <div class="card-info">
+                            <div style="font-size:0.9rem; margin-bottom:5px;">${p.title}</div>
+                            <div class="price">${p.price}</div>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function openProduct(p) {
+            currentItem = p;
+            document.getElementById('m-img').src = p.image;
+            document.getElementById('m-title').innerText = p.title;
+            document.getElementById('m-price').innerText = p.price;
+            document.getElementById('m-desc').innerText = p.desc || "Описание отсутствует";
+            document.getElementById('product-modal').style.display = 'flex';
+        }
+
+        function closeProduct() { document.getElementById('product-modal').style.display = 'none'; }
+        
+        function openOrder() {
+            let name = prompt("Введите ваше ФИО и телефон для заказа:");
+            if(name) {
+                fetch('/order', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ product: currentItem.title, fio: name, phone: "через prompt" })
                 });
-            } catch (e) { console.log(e); }
+                alert("Заказ принят! Менеджер свяжется с вами.");
+            }
         }
-        function openOrder(name) { selectedProduct = name; document.getElementById('p-name').innerText = name; document.getElementById('order-modal').style.display = 'flex'; }
-        function closeOrder() { document.getElementById('order-modal').style.display = 'none'; }
-        async function sendOrder() {
-            const data = {
-                product: selectedProduct,
-                fio: document.getElementById('fio').value,
-                phone: document.getElementById('phone').value,
-                address: document.getElementById('address').value
-            };
-            const res = await fetch('/order', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
-            if(res.ok) { alert("Заказ отправлен!"); closeOrder(); }
-        }
-        loadProducts();
+        load();
     </script>
 </body>
 </html>
