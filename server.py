@@ -1,26 +1,35 @@
-import os, json, requests
+import os, json, requests, base64
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
 
-# ВСТАВЬ СВОИ ДАННЫЕ СЮДА
-TOKEN = "8280920495:AAE-KXGDd7wdT3fsxtqFOGBm0bjjF6B0zZw"
+# --- ТВОИ НАСТРОЙКИ ---
+TOKEN_TG = "8280920495:AAE-KXGDd7wdT3fsxtqFOGBm0bjjF6B0zZw"
 MY_ID = "5929760309"
-DB_FILE = "products.json"
+GH_TOKEN = "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"
+REPO = "Lucka720/streetwear-shop" # Например: Lucka720/streetwear-shop
+ADMIN_PASSWORD = "Qwerty58763"
 
-def load_db():
-    if os.path.exists(DB_FILE):
-        with open(DB_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return []
+FILE_PATH = "products.json"
 
-def save_db(data):
-    with open(DB_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+def get_gh_file():
+    url = f"https://api.github.com/repos/{REPO}/contents/{FILE_PATH}"
+    headers = {"Authorization": f"token {GH_TOKEN}"}
+    r = requests.get(url, headers=headers)
+    if r.status_code == 200:
+        content = base64.b64decode(r.json()['content']).decode('utf-8')
+        return json.loads(content), r.json()['sha']
+    return [], None
 
-products = load_db()
+def save_to_gh(data, sha=None):
+    url = f"https://api.github.com/repos/{REPO}/contents/{FILE_PATH}"
+    headers = {"Authorization": f"token {GH_TOKEN}"}
+    content = base64.b64encode(json.dumps(data, ensure_ascii=False, indent=4).encode('utf-8')).decode('utf-8')
+    payload = {"message": "Update products", "content": content}
+    if sha: payload["sha"] = sha
+    requests.put(url, json=payload, headers=headers)
 
 @app.route('/')
 def index(): return send_from_directory('.', 'index.html')
@@ -29,37 +38,35 @@ def index(): return send_from_directory('.', 'index.html')
 def admin(): return send_from_directory('.', 'admin.html')
 
 @app.route('/get-products')
-def get_products(): return jsonify(products)
+def get_products():
+    products, _ = get_gh_file()
+    return jsonify(products)
 
 @app.route('/add-product', methods=['POST'])
 def add_product():
-    data = request.json
-    products.append(data)
-    save_db(products)
+    new_item = request.json
+    products, sha = get_gh_file()
+    products.append(new_item)
+    save_to_gh(products, sha)
     return jsonify({"status": "ok"})
+
+@app.route('/delete-product', methods=['POST'])
+def delete_product():
+    d = request.json
+    if d.get('password') == ADMIN_PASSWORD:
+        products, sha = get_gh_file()
+        # Удаляем по названию (или можно добавить ID)
+        products = [p for p in products if p.get('title') != d.get('title')]
+        save_to_gh(products, sha)
+        return jsonify({"status": "ok"})
+    return jsonify({"status": "error"}), 403
 
 @app.route('/order', methods=['POST'])
 def order():
     d = request.json
-    # Собираем подробное сообщение для бота
-    text = (
-        f"🛍 **НОВЫЙ ЗАКАЗ**\n"
-        f"--------------------------\n"
-        f"📦 Товар: {d.get('product')}\n"
-        f"👤 ФИО: {d.get('fio')}\n"
-        f"📞 Тел/ТГ: {d.get('phone')}\n"
-        f"📍 Адрес/Индекс: {d.get('address')}\n"
-        f"📧 Email: {d.get('email') or 'не указан'}\n"
-        f"--------------------------"
-    )
-    
-    # Отправляем в Telegram
-    requests.post(
-        f"https://api.telegram.org/bot{TOKEN}/sendMessage", 
-        json={"chat_id": MY_ID, "text": text, "parse_mode": "Markdown"}
-    )
+    text = f"🛍 ЗАКАЗ: {d.get('product')}\n👤 {d.get('fio')}\n📞 {d.get('phone')}\n📍 {d.get('address')}\n📧 {d.get('email')}"
+    requests.post(f"https://api.telegram.org/bot{TOKEN_TG}/sendMessage", json={"chat_id": MY_ID, "text": text})
     return jsonify({"status": "success"})
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
