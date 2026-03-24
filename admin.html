@@ -6,13 +6,14 @@
     <title>DEXTUF ADMIN</title>
     <style>
         body { background: #000; color: #fff; font-family: sans-serif; padding: 20px; text-align: center; }
-        input { width: 100%; max-width: 300px; padding: 10px; margin: 10px 0; display: block; margin-left: auto; margin-right: auto; }
-        button { background: #ff5000; color: #fff; border: none; padding: 15px 30px; font-weight: bold; cursor: pointer; border-radius: 5px; }
+        input { width: 100%; max-width: 350px; padding: 10px; margin: 10px 0; display: block; margin-left: auto; margin-right: auto; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px; }
+        button { background: #ff5000; color: #fff; border: none; padding: 15px 30px; font-weight: bold; cursor: pointer; border-radius: 5px; margin-top: 10px; }
+        button:hover { background: #e64500; }
     </style>
 </head>
 <body>
     <h1>АДМИНКА DEXTUF</h1>
-    <input type="text" id="emoji" placeholder="Эмодзи (например 👕)">
+    <input type="text" id="image" placeholder="Ссылка на фото (URL)">
     <input type="text" id="title" placeholder="Название товара">
     <input type="text" id="price" placeholder="Цена (например 2500₽)">
     <button onclick="addProduct()">ДОБАВИТЬ ТОВАР</button>
@@ -20,22 +21,30 @@
     <script>
         async function addProduct() {
             const item = {
-                emoji: document.getElementById('emoji').value,
+                image: document.getElementById('image').value,
                 title: document.getElementById('title').value,
                 price: document.getElementById('price').value
             };
             
-            if(!item.title || !item.price) return alert("Заполни поля!");
+            if(!item.title || !item.price || !item.image) {
+                return alert("Заполни все поля, включая ссылку на фото!");
+            }
 
-            const res = await fetch('/add-product', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(item)
-            });
+            try {
+                const res = await fetch('/add-product', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(item)
+                });
 
-            if(res.ok) {
-                alert('Товар добавлен! Проверяй главную.');
-                location.reload();
+                if(res.ok) {
+                    alert('Товар успешно добавлен с фото!');
+                    location.reload();
+                } else {
+                    alert('Ошибка сервера при добавлении.');
+                }
+            } catch (err) {
+                alert('Ошибка соединения с сервером.');
             }
         }
     </script>
