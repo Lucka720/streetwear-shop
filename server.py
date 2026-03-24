@@ -5,12 +5,12 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-# --- ТВОИ НАСТРОЙКИ ---
+# --- НАСТРОЙКИ ---
 TOKEN_TG = "8280920495:AAE-KXGDd7wdT3fsxtqFOGBm0bjjF6B0zZw"
 MY_ID = "5929760309"
 GH_TOKEN = "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"
-REPO = "Lucka720/streetwear-shop" # Например: Lucka720/streetwear-shop
-ADMIN_PASSWORD = "Qwerty58763"
+REPO = "lucka720/streetwear-shop" 
+ADMIN_PASSWORD = "Qwerty58763" # Для удаления товаров
 
 FILE_PATH = "products.json"
 
@@ -50,21 +50,11 @@ def add_product():
     save_to_gh(products, sha)
     return jsonify({"status": "ok"})
 
-@app.route('/delete-product', methods=['POST'])
-def delete_product():
-    d = request.json
-    if d.get('password') == ADMIN_PASSWORD:
-        products, sha = get_gh_file()
-        # Удаляем по названию (или можно добавить ID)
-        products = [p for p in products if p.get('title') != d.get('title')]
-        save_to_gh(products, sha)
-        return jsonify({"status": "ok"})
-    return jsonify({"status": "error"}), 403
-
 @app.route('/order', methods=['POST'])
 def order():
     d = request.json
-    text = f"🛍 ЗАКАЗ: {d.get('product')}\n👤 {d.get('fio')}\n📞 {d.get('phone')}\n📍 {d.get('address')}\n📧 {d.get('email')}"
+    # Бот пришлет тебе инфу о заказе ПЕРЕД тем, как клиент уйдет платить
+    text = f"🛍 НОВЫЙ ЗАКАЗ!\nТовар: {d.get('product')}\n👤 ФИО: {d.get('fio')}\n📞 Тел: {d.get('phone')}\n📍 Адрес: {d.get('address')}\n📧 Email: {d.get('email')}"
     requests.post(f"https://api.telegram.org/bot{TOKEN_TG}/sendMessage", json={"chat_id": MY_ID, "text": text})
     return jsonify({"status": "success"})
 
