@@ -1,41 +1,49 @@
-import os
+import os, json, requests
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-import requests
 
 app = Flask(__name__)
 CORS(app)
 
-# ВСТАВЬ СВОИ ДАННЫЕ ИЗ БОТА
-TOKEN = "ЗДЕСЬ_ТОКЕН"
-MY_ID = "ЗДЕСЬ_ID"
+TOKEN = "8280920495:AAE-KXGDd7wdT3fsxtqFOGBm0bjjF6B0zZw"
+MY_ID = "5929760309"
+DB_FILE = "products.json"
 
-products = []
+# Загрузка данных из файла при старте
+def load_db():
+    if os.path.exists(DB_FILE):
+        with open(DB_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return []
+
+# Сохранение в файл
+def save_db(data):
+    with open(DB_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+products = load_db()
 
 @app.route('/')
-def index():
-    return send_from_directory('.', 'index.html')
+def index(): return send_from_directory('.', 'index.html')
 
 @app.route('/admin')
-def admin_page():
-    return send_from_directory('.', 'admin.html')
+def admin(): return send_from_directory('.', 'admin.html')
 
-@app.route('/get-products', methods=['GET'])
-def get_products():
-    return jsonify(products)
+@app.route('/get-products')
+def get_products(): return jsonify(products)
 
 @app.route('/add-product', methods=['POST'])
 def add_product():
     data = request.json
-    # Сохраняем товар (теперь там image вместо emoji)
     products.append(data)
+    save_db(products) # Сохраняем в файл!
     return jsonify({"status": "ok"})
 
 @app.route('/order', methods=['POST'])
 def order():
-    data = request.json
-    text = f"🛍 ЗАКАЗ: {data.get('product')}\n👤 ФИО: {data.get('fio')}\n📞 Тел: {data.get('phone')}\n📍 Адрес: {data.get('address')}"
-    requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={"chat_id": MY_ID, "text": text})
+    d = request.json
+    msg = f"🛍 ЗАКАЗ: {d.get('product')}\n👤 {d.get('fio')}\n📍 {d.get('address')}"
+    requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={"chat_id": MY_ID, "text": msg})
     return jsonify({"status": "success"})
 
 if __name__ == '__main__':
