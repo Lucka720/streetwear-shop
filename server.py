@@ -9,7 +9,7 @@ CORS(app)
 TOKEN_TG = "8280920495:AAE-KXGDd7wdT3fsxtqFOGBm0bjjF6B0zZw"
 MY_ID = "5929760309"
 GH_TOKEN = "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"
-REPO = "lucka720/streetwear-shop" 
+REPO = "Lucka720/streetwear-shop" 
 ADMIN_PASSWORD = "Qwerty58763" # Для удаления товаров
 
 FILE_PATH = "products.json"
