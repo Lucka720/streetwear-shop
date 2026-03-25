@@ -69,15 +69,21 @@
 
         async function detectCurrency() {
             try {
+                // 1. Узнаем страну пользователя
                 const geoRes = await fetch('https://ipapi.co/json/');
                 const geoData = await geoRes.json();
+                
                 if (geoData.country_code === 'CZ') userCurrency = 'CZK';
+                else if (geoData.country_code === 'UA') userCurrency = 'UAH';
                 else if (['DE', 'FR', 'ES', 'IT', 'SK', 'AT', 'BE'].includes(geoData.country_code)) userCurrency = 'EUR';
                 
+                // 2. Получаем реальный курс обмена (база USD)
                 const rateRes = await fetch('https://api.exchangerate-api.v4/latest/USD');
                 const rateData = await rateRes.json();
                 exchangeRate = rateData.rates[userCurrency] || 1;
-            } catch (e) { console.log("Currency detect error"); }
+            } catch (e) { 
+                console.log("Currency detect error, using defaults"); 
+            }
             load();
         }
 
@@ -91,6 +97,7 @@
             const list = document.getElementById('list');
             list.innerHTML = '';
             allProducts.forEach(p => {
+                // Пересчитываем цену для витрины
                 const convertedPrice = (parseFloat(p.price) * exchangeRate).toFixed(0);
                 const data = encodeURIComponent(JSON.stringify(p));
                 list.innerHTML += `
@@ -124,7 +131,7 @@
         function closeOrderForm() { document.getElementById('order-modal').style.display = 'none'; }
 
         async function sendOrder() {
-            const paypalEmail = "didenko.com.ua@gmail.com"; // ВПИШИ СВОЙ PAYPAL
+            const paypalEmail = "didenko.com.ua@gmail.com"; 
             const data = {
                 product: currentItem.title,
                 fio: document.getElementById('fio').value,
@@ -135,14 +142,13 @@
 
             if(!data.fio || !data.phone || !data.address) return alert("Заполни все основные поля!");
 
-            // Отправляем данные в ТГ бот
             await fetch('/order', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(data)
             });
 
-            // Формируем оплату
+            // Пересчитываем цену для PayPal (с копейками .toFixed(2))
             const finalPrice = (parseFloat(currentItem.price) * exchangeRate).toFixed(2);
             const paypalUrl = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${paypalEmail}&item_name=${encodeURIComponent(data.product)}&amount=${finalPrice}&currency_code=${userCurrency}`;
             
