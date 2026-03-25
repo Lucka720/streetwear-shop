@@ -2,83 +2,106 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Админка - Управление товарами</title>
+    <title>Админка - DEXTUF</title>
     <style>
         body { background: #121212; color: white; font-family: sans-serif; padding: 20px; }
         input, textarea { width: 100%; padding: 10px; margin: 10px 0; background: #222; border: 1px solid #444; color: white; border-radius: 5px; box-sizing: border-box; }
         button { background: #ff5000; color: white; border: none; padding: 15px; width: 100%; cursor: pointer; border-radius: 5px; font-weight: bold; }
         .product-item { background: #1a1a1a; padding: 15px; margin-top: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; }
         .del-btn { background: #cc0000; width: auto; padding: 8px 15px; }
-        h2 { border-bottom: 2px solid #ff5000; padding-bottom: 10px; }
+        #status { color: #ff5000; font-size: 0.9rem; margin: 5px 0; }
     </style>
 </head>
 <body>
 
     <h2>Добавить товар</h2>
     <input type="text" id="title" placeholder="Название товара">
-    <input type="number" id="price" placeholder="Цена в USD (только число)">
-    <input type="text" id="image" placeholder="Ссылка на фото">
+    <input type="number" id="price" placeholder="Цена в USD">
+    
+    <label>Выбери фото из галереи:</label>
+    <input type="file" id="fileInput" accept="image/*">
+    <div id="status"></div>
+    
     <textarea id="desc" placeholder="Описание товара" rows="4"></textarea>
-    <button onclick="addProduct()">ДОБАВИТЬ НА САЙТ</button>
+    <button id="addBtn" onclick="addProduct()">ОПУБЛИКОВАТЬ</button>
 
-    <h2 style="margin-top: 40px;">Список товаров (Удаление)</h2>
-    <div id="admin-list">Загрузка товаров...</div>
+    <h2 style="margin-top: 40px;">Управление</h2>
+    <div id="admin-list">Загрузка...</div>
 
     <script>
-        const pass = "Qwerty58763"; // Твой пароль из server.py
+        const pass = "Qwerty58763";
+        // ВСТАВЬ СВОЙ КЛЮЧ ОТ IMGBB НИЖЕ
+        const IMGBB_KEY = "bfa785e76c7201f0ed8aaacf1a92c15c"; 
 
-        // Загрузка товаров для списка удаления
         async function loadAdminProducts() {
             const res = await fetch('/get-products');
             const products = await res.json();
             const list = document.getElementById('admin-list');
             list.innerHTML = '';
-            
             products.forEach((p, index) => {
                 list.innerHTML += `
                     <div class="product-item">
-                        <div>
-                            <strong>${p.title}</strong> — ${p.price} USD
-                        </div>
+                        <div><strong>${p.title}</strong> — ${p.price} USD</div>
                         <button class="del-btn" onclick="deleteProduct(${index})">Удалить</button>
                     </div>`;
             });
-            if(products.length === 0) list.innerHTML = "Товаров пока нет.";
         }
 
         async function addProduct() {
-            const data = {
-                title: document.getElementById('title').value,
-                price: document.getElementById('price').value,
-                image: document.getElementById('image').value,
-                desc: document.getElementById('desc').value
-            };
+            const fileInput = document.getElementById('fileInput');
+            const btn = document.getElementById('addBtn');
+            const status = document.getElementById('status');
 
-            if(!data.title || !data.price) return alert("Заполни название и цену!");
-
-            await fetch('/add-product', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
+            if (fileInput.files.length === 0) return alert("Выбери фото!");
             
-            alert("Товар добавлен!");
-            location.reload();
+            btn.disabled = true;
+            status.innerText = "Загружаю фото на сервер...";
+
+            try {
+                // 1. Загружаем на ImgBB
+                const formData = new FormData();
+                formData.append("image", fileInput.files[0]);
+                
+                const imgRes = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, {
+                    method: "POST",
+                    body: formData
+                });
+                const imgData = await imgRes.json();
+                const imageUrl = imgData.data.url;
+
+                // 2. Отправляем на наш сервер
+                const data = {
+                    title: document.getElementById('title').value,
+                    price: document.getElementById('price').value,
+                    image: imageUrl,
+                    desc: document.getElementById('desc').value
+                };
+
+                await fetch('/add-product', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+
+                alert("Товар успешно добавлен!");
+                location.reload();
+            } catch (e) {
+                alert("Ошибка загрузки!");
+                console.error(e);
+            } finally {
+                btn.disabled = false;
+            }
         }
 
         async function deleteProduct(index) {
-            if(!confirm("Удалить этот товар?")) return;
-            
-            const enteredPass = prompt("Введите пароль администратора:");
-            if(enteredPass !== pass) return alert("Неверный пароль!");
-
-            // Мы добавим этот роут в server.py ниже
+            if(!confirm("Удалить?")) return;
+            const enteredPass = prompt("Пароль:");
+            if(enteredPass !== pass) return alert("Ошибка!");
             await fetch('/delete-product', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ index: index, password: enteredPass })
             });
-            
             location.reload();
         }
 
