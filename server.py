@@ -8,7 +8,6 @@ CORS(app)
 # --- НАСТРОЙКИ ---
 TOKEN_TG = "8280920495:AAE-KXGDd7wdT3fsxtqFOGBm0bjjF6B0zZw"
 MY_ID = 5929760309
-# Здесь мы убрали ghp_... и теперь берем его из настроек Render
 GH_TOKEN = os.environ.get("GH_TOKEN") 
 REPO = "Lucka720/streetwear-shop" 
 ADMIN_PASSWORD = "Qwerty58763" # Для удаления товаров
@@ -51,10 +50,26 @@ def add_product():
     save_to_gh(products, sha)
     return jsonify({"status": "ok"})
 
+# --- ВОТ ЭТОТ КУСОК Я ДОБАВИЛ ---
+@app.route('/delete-product', methods=['POST'])
+def delete_product():
+    d = request.json
+    if d.get('password') != ADMIN_PASSWORD:
+        return jsonify({"status": "error", "message": "Wrong password"}), 403
+    
+    products, sha = get_gh_file()
+    index = d.get('index')
+    
+    if 0 <= index < len(products):
+        products.pop(index) 
+        save_to_gh(products, sha)
+        return jsonify({"status": "ok"})
+    return jsonify({"status": "error"}), 400
+# --- КОНЕЦ НОВОГО КУСКА ---
+
 @app.route('/order', methods=['POST'])
 def order():
     d = request.json
-    # Бот пришлет тебе инфу о заказе ПЕРЕД тем, как клиент уйдет платить
     text = f"🛍 НОВЫЙ ЗАКАЗ!\nТовар: {d.get('product')}\n👤 ФИО: {d.get('fio')}\n📞 Тел: {d.get('phone')}\n📍 Адрес: {d.get('address')}\n📧 Email: {d.get('email')}"
     requests.post(f"https://api.telegram.org/bot{TOKEN_TG}/sendMessage", json={"chat_id": MY_ID, "text": text})
     return jsonify({"status": "success"})
