@@ -10,5 +10,11 @@
         "price": "7",
         "image": "https://i.ibb.co/wFxhcfxy/1000010294.jpg",
         "desc": "Лютые"
+    },
+    {
+        "title": "Котик",
+        "price": "0.5",
+        "image": "https://i.ibb.co/xtZxt73q/1000010150.jpg",
+        "desc": "Веселый"
     }
 ]
