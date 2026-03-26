@@ -10,7 +10,7 @@ TOKEN_TG = "8280920495:AAE-KXGDd7wdT3fsxtqFOGBm0bjjF6B0zZw"
 MY_ID = 5929760309
 GH_TOKEN = os.environ.get("GH_TOKEN") 
 REPO = "Lucka720/streetwear-shop" 
-ADMIN_PASSWORD = "Qwerty58763" # Для удаления товаров
+ADMIN_PASSWORD = "Qwerty58763"
 
 FILE_PATH = "products.json"
 
@@ -50,27 +50,34 @@ def add_product():
     save_to_gh(products, sha)
     return jsonify({"status": "ok"})
 
-# --- ВОТ ЭТОТ КУСОК Я ДОБАВИЛ ---
 @app.route('/delete-product', methods=['POST'])
 def delete_product():
     d = request.json
     if d.get('password') != ADMIN_PASSWORD:
-        return jsonify({"status": "error", "message": "Wrong password"}), 403
-    
+        return jsonify({"status": "error"}), 403
     products, sha = get_gh_file()
     index = d.get('index')
-    
     if 0 <= index < len(products):
-        products.pop(index) 
+        products.pop(index)
         save_to_gh(products, sha)
         return jsonify({"status": "ok"})
     return jsonify({"status": "error"}), 400
-# --- КОНЕЦ НОВОГО КУСКА ---
 
 @app.route('/order', methods=['POST'])
 def order():
     d = request.json
-    text = f"🛍 НОВЫЙ ЗАКАЗ!\nТовар: {d.get('product')}\n👤 ФИО: {d.get('fio')}\n📞 Тел: {d.get('phone')}\n📍 Адрес: {d.get('address')}\n📧 Email: {d.get('email')}"
+    # Бот пришлет это ТОЛЬКО когда оплата подтверждена возвратом на сайт
+    text = (
+        f"💰 ФИНАЛЬНЫЙ ЗАКАЗ (ОПЛАЧЕНО)\n"
+        f"--------------------------\n"
+        f"📦 Товар: {d.get('product')}\n"
+        f"👤 ФИО: {d.get('fio')}\n"
+        f"📞 Тел: {d.get('phone')}\n"
+        f"📍 Адрес: {d.get('address')}\n"
+        f"📧 Email: {d.get('email')}\n"
+        f"--------------------------\n"
+        f"✅ СТАТУС: УСПЕШНО ОПЛАЧЕНО ✅"
+    )
     requests.post(f"https://api.telegram.org/bot{TOKEN_TG}/sendMessage", json={"chat_id": MY_ID, "text": text})
     return jsonify({"status": "success"})
 
