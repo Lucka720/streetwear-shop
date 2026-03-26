@@ -69,7 +69,6 @@
 
         async function detectCurrency() {
             try {
-                // 1. Узнаем страну пользователя
                 const geoRes = await fetch('https://ipapi.co/json/');
                 const geoData = await geoRes.json();
                 
@@ -77,7 +76,6 @@
                 else if (geoData.country_code === 'UA') userCurrency = 'UAH';
                 else if (['DE', 'FR', 'ES', 'IT', 'SK', 'AT', 'BE'].includes(geoData.country_code)) userCurrency = 'EUR';
                 
-                // 2. Получаем реальный курс обмена (база USD)
                 const rateRes = await fetch('https://api.exchangerate-api.v4/latest/USD');
                 const rateData = await rateRes.json();
                 exchangeRate = rateData.rates[userCurrency] || 1;
@@ -97,8 +95,10 @@
             const list = document.getElementById('list');
             list.innerHTML = '';
             allProducts.forEach(p => {
-                // Пересчитываем цену для витрины
-                const convertedPrice = (parseFloat(p.price) * exchangeRate).toFixed(0);
+                // ИСПРАВЛЕНО: Математический пересчет цены
+                const rawPrice = parseFloat(p.price) || 0;
+                const convertedPrice = Math.round(rawPrice * exchangeRate);
+                
                 const data = encodeURIComponent(JSON.stringify(p));
                 list.innerHTML += `
                     <div class="card">
@@ -113,7 +113,10 @@
 
         function openProduct(data) {
             currentItem = JSON.parse(decodeURIComponent(data));
-            const convertedPrice = (parseFloat(currentItem.price) * exchangeRate).toFixed(0);
+            // ИСПРАВЛЕНО: Математический пересчет цены для модалки
+            const rawPrice = parseFloat(currentItem.price) || 0;
+            const convertedPrice = Math.round(rawPrice * exchangeRate);
+
             document.getElementById('m-img').src = currentItem.image;
             document.getElementById('m-title').innerText = currentItem.title;
             document.getElementById('m-price').innerText = `${convertedPrice} ${userCurrency}`;
@@ -148,7 +151,6 @@
                 body: JSON.stringify(data)
             });
 
-            // Пересчитываем цену для PayPal (с копейками .toFixed(2))
             const finalPrice = (parseFloat(currentItem.price) * exchangeRate).toFixed(2);
             const paypalUrl = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${paypalEmail}&item_name=${encodeURIComponent(data.product)}&amount=${finalPrice}&currency_code=${userCurrency}`;
             
