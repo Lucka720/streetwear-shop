@@ -4,5 +4,11 @@
         "price": "15",
         "image": "https://i.ibb.co/wFxhcfxy/1000010294.jpg",
         "desc": "Самые крутые в мире"
+    },
+    {
+        "title": "Наушники",
+        "price": "7",
+        "image": "https://i.ibb.co/wFxhcfxy/1000010294.jpg",
+        "desc": "Лютые"
     }
 ]
