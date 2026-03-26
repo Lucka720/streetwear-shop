@@ -15,7 +15,6 @@
         .price { font-weight: bold; color: var(--accent); font-size: 1.1rem; }
         .product-title { font-size: 0.85rem; color: #ccc; margin-bottom: 5px; }
 
-        /* ОКНО КАРТОЧКИ ТОВАРА */
         #product-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; flex-direction: column; overflow-y: auto; }
         .modal-img { width: 100%; max-height: 60vh; object-fit: contain; }
         .modal-details { padding: 20px; background: #0e0e0e; border-radius: 20px 20px 0 0; margin-top: -20px; position: relative; }
@@ -24,7 +23,6 @@
         .buy-now-btn { background: var(--accent); color: #fff; border: none; width: 100%; padding: 18px; font-size: 1.1rem; font-weight: bold; border-radius: 12px; cursor: pointer; }
         .close-btn { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 24px; z-index: 2100; }
 
-        /* ОКНО ОФОРМЛЕНИЯ ЗАКАЗА */
         #order-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 3000; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
         .order-content { background: #1c1c1c; padding: 25px; border-radius: 20px; width: 100%; max-width: 400px; position: relative; }
         .order-content h2 { margin: 0 0 5px 0; font-size: 1.3rem; }
@@ -35,7 +33,7 @@
 </head>
 <body>
     <header><div style="color:var(--accent); font-weight:bold; font-size:1.5rem; letter-spacing: 2px;">DEXTUF</div></header>
-    <div class="container" id="list">Загрузка товаров и курсов...</div>
+    <div class="container" id="list">Загрузка...</div>
 
     <div id="product-modal">
         <div class="close-btn" onclick="closeProduct()">✕</div>
@@ -66,29 +64,23 @@
         let allProducts = [];
         let userCurrency = 'USD';
         let exchangeRate = 1;
-
-        // Фиксированные курсы на случай ошибки API
         const backupRates = { "CZK": 23.4, "UAH": 39.2, "EUR": 0.92, "USD": 1 };
 
         async function init() {
             try {
-                // 1. Сначала определяем страну
                 const geoRes = await fetch('https://ipapi.co/json/');
                 const geoData = await geoRes.json();
-                
                 if (geoData.country_code === 'CZ') userCurrency = 'CZK';
                 else if (geoData.country_code === 'UA') userCurrency = 'UAH';
                 else if (['DE', 'FR', 'ES', 'IT', 'SK', 'AT', 'BE'].includes(geoData.country_code)) userCurrency = 'EUR';
 
-                // 2. Получаем свежий курс
                 const rateRes = await fetch('https://api.exchangerate-api.v4/latest/USD');
                 const rateData = await rateRes.json();
                 exchangeRate = rateData.rates[userCurrency] || backupRates[userCurrency] || 1;
             } catch (e) {
-                console.log("Ошибка сети, ставим запасной курс");
                 exchangeRate = backupRates[userCurrency] || 1;
             }
-            // 3. Только когда курс есть — грузим товары
+            await checkPayment(); // Проверяем оплату при возврате
             loadProducts();
         }
 
@@ -104,16 +96,8 @@
             allProducts.forEach(p => {
                 const val = parseFloat(p.price) || 0;
                 const finalPrice = Math.round(val * exchangeRate);
-                
                 const data = encodeURIComponent(JSON.stringify(p));
-                list.innerHTML += `
-                    <div class="card">
-                        <img src="${p.image}" onclick="openProduct('${data}')">
-                        <div class="card-info">
-                            <div class="product-title">${p.title}</div>
-                            <div class="price">${finalPrice} ${userCurrency}</div>
-                        </div>
-                    </div>`;
+                list.innerHTML += `<div class="card"><img src="${p.image}" onclick="openProduct('${data}')"><div class="card-info"><div class="product-title">${p.title}</div><div class="price">${finalPrice} ${userCurrency}</div></div></div>`;
             });
         }
 
@@ -121,7 +105,6 @@
             currentItem = JSON.parse(decodeURIComponent(data));
             const val = parseFloat(currentItem.price) || 0;
             const finalPrice = Math.round(val * exchangeRate);
-
             document.getElementById('m-img').src = currentItem.image;
             document.getElementById('m-title').innerText = currentItem.title;
             document.getElementById('m-price').innerText = `${finalPrice} ${userCurrency}`;
@@ -138,23 +121,40 @@
 
         async function sendOrder() {
             const paypalEmail = "didenko.com.ua@gmail.com"; 
-            const data = {
-                product: currentItem.title,
+            const customerData = {
                 fio: document.getElementById('fio').value,
                 phone: document.getElementById('phone').value,
                 address: document.getElementById('address').value,
-                email: document.getElementById('email').value
+                email: document.getElementById('email').value,
+                product: currentItem.title
             };
-            if(!data.fio || !data.phone || !data.address) return alert("Заполни поля!");
 
-            await fetch('/order', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
+            if(!customerData.fio || !customerData.phone || !customerData.address) return alert("Заполни поля!");
+
+            // Сохраняем инфу перед уходом
+            localStorage.setItem('pendingOrder', JSON.stringify(customerData));
 
             const finalPrice = (parseFloat(currentItem.price) * exchangeRate).toFixed(2);
-            window.location.href = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${paypalEmail}&item_name=${encodeURIComponent(data.product)}&amount=${finalPrice}&currency_code=${userCurrency}`;
+            const returnUrl = window.location.origin + "/?payment=success";
+            
+            window.location.href = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${paypalEmail}&item_name=${encodeURIComponent(customerData.product)}&amount=${finalPrice}&currency_code=${userCurrency}&return=${encodeURIComponent(returnUrl)}`;
+        }
+
+        async function checkPayment() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('payment') === 'success') {
+                const savedData = JSON.parse(localStorage.getItem('pendingOrder'));
+                if (savedData) {
+                    await fetch('/order', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(savedData)
+                    });
+                    alert("Оплата прошла! Мы получили ваш заказ.");
+                    localStorage.removeItem('pendingOrder');
+                }
+                window.history.replaceState({}, document.title, "/");
+            }
         }
 
         init();
