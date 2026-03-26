@@ -35,7 +35,7 @@
 </head>
 <body>
     <header><div style="color:var(--accent); font-weight:bold; font-size:1.5rem; letter-spacing: 2px;">DEXTUF</div></header>
-    <div class="container" id="list"></div>
+    <div class="container" id="list">Загрузка товаров и курсов...</div>
 
     <div id="product-modal">
         <div class="close-btn" onclick="closeProduct()">✕</div>
@@ -67,25 +67,32 @@
         let userCurrency = 'USD';
         let exchangeRate = 1;
 
-        async function detectCurrency() {
+        // Фиксированные курсы на случай ошибки API
+        const backupRates = { "CZK": 23.4, "UAH": 39.2, "EUR": 0.92, "USD": 1 };
+
+        async function init() {
             try {
+                // 1. Сначала определяем страну
                 const geoRes = await fetch('https://ipapi.co/json/');
                 const geoData = await geoRes.json();
                 
                 if (geoData.country_code === 'CZ') userCurrency = 'CZK';
                 else if (geoData.country_code === 'UA') userCurrency = 'UAH';
                 else if (['DE', 'FR', 'ES', 'IT', 'SK', 'AT', 'BE'].includes(geoData.country_code)) userCurrency = 'EUR';
-                
+
+                // 2. Получаем свежий курс
                 const rateRes = await fetch('https://api.exchangerate-api.v4/latest/USD');
                 const rateData = await rateRes.json();
-                exchangeRate = rateData.rates[userCurrency] || 1;
-            } catch (e) { 
-                console.log("Currency detect error, using defaults"); 
+                exchangeRate = rateData.rates[userCurrency] || backupRates[userCurrency] || 1;
+            } catch (e) {
+                console.log("Ошибка сети, ставим запасной курс");
+                exchangeRate = backupRates[userCurrency] || 1;
             }
-            load();
+            // 3. Только когда курс есть — грузим товары
+            loadProducts();
         }
 
-        async function load() {
+        async function loadProducts() {
             const res = await fetch('/get-products');
             allProducts = await res.json();
             renderProducts();
@@ -95,9 +102,8 @@
             const list = document.getElementById('list');
             list.innerHTML = '';
             allProducts.forEach(p => {
-                // ИСПРАВЛЕНО: Математический пересчет цены
-                const rawPrice = parseFloat(p.price) || 0;
-                const convertedPrice = Math.round(rawPrice * exchangeRate);
+                const val = parseFloat(p.price) || 0;
+                const finalPrice = Math.round(val * exchangeRate);
                 
                 const data = encodeURIComponent(JSON.stringify(p));
                 list.innerHTML += `
@@ -105,7 +111,7 @@
                         <img src="${p.image}" onclick="openProduct('${data}')">
                         <div class="card-info">
                             <div class="product-title">${p.title}</div>
-                            <div class="price">${convertedPrice} ${userCurrency}</div>
+                            <div class="price">${finalPrice} ${userCurrency}</div>
                         </div>
                     </div>`;
             });
@@ -113,24 +119,21 @@
 
         function openProduct(data) {
             currentItem = JSON.parse(decodeURIComponent(data));
-            // ИСПРАВЛЕНО: Математический пересчет цены для модалки
-            const rawPrice = parseFloat(currentItem.price) || 0;
-            const convertedPrice = Math.round(rawPrice * exchangeRate);
+            const val = parseFloat(currentItem.price) || 0;
+            const finalPrice = Math.round(val * exchangeRate);
 
             document.getElementById('m-img').src = currentItem.image;
             document.getElementById('m-title').innerText = currentItem.title;
-            document.getElementById('m-price').innerText = `${convertedPrice} ${userCurrency}`;
+            document.getElementById('m-price').innerText = `${finalPrice} ${userCurrency}`;
             document.getElementById('m-desc').innerText = currentItem.desc || "";
             document.getElementById('product-modal').style.display = 'flex';
         }
 
         function closeProduct() { document.getElementById('product-modal').style.display = 'none'; }
-
         function showOrderForm() {
             document.getElementById('order-product-name').innerText = currentItem.title;
             document.getElementById('order-modal').style.display = 'flex';
         }
-
         function closeOrderForm() { document.getElementById('order-modal').style.display = 'none'; }
 
         async function sendOrder() {
@@ -142,8 +145,7 @@
                 address: document.getElementById('address').value,
                 email: document.getElementById('email').value
             };
-
-            if(!data.fio || !data.phone || !data.address) return alert("Заполни все основные поля!");
+            if(!data.fio || !data.phone || !data.address) return alert("Заполни поля!");
 
             await fetch('/order', {
                 method: 'POST',
@@ -152,12 +154,10 @@
             });
 
             const finalPrice = (parseFloat(currentItem.price) * exchangeRate).toFixed(2);
-            const paypalUrl = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${paypalEmail}&item_name=${encodeURIComponent(data.product)}&amount=${finalPrice}&currency_code=${userCurrency}`;
-            
-            window.location.href = paypalUrl;
+            window.location.href = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${paypalEmail}&item_name=${encodeURIComponent(data.product)}&amount=${finalPrice}&currency_code=${userCurrency}`;
         }
 
-        detectCurrency();
+        init();
     </script>
 </body>
 </html>
