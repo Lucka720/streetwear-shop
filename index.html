@@ -104,4 +104,62 @@
         function openProduct(data) {
             currentItem = JSON.parse(decodeURIComponent(data));
             const val = parseFloat(currentItem.price) || 0;
-            const final
+            const finalPrice = Math.round(val * exchangeRate);
+            document.getElementById('m-img').src = currentItem.image;
+            document.getElementById('m-title').innerText = currentItem.title;
+            document.getElementById('m-price').innerText = `${finalPrice} ${userCurrency}`;
+            document.getElementById('m-desc').innerText = currentItem.desc || "";
+            document.getElementById('product-modal').style.display = 'flex';
+        }
+
+        function closeProduct() { document.getElementById('product-modal').style.display = 'none'; }
+        function showOrderForm() {
+            document.getElementById('order-product-name').innerText = currentItem.title;
+            document.getElementById('order-modal').style.display = 'flex';
+        }
+        function closeOrderForm() { document.getElementById('order-modal').style.display = 'none'; }
+
+        async function sendOrder() {
+            const paypalEmail = "didenko.com.ua@gmail.com"; 
+            const customerData = {
+                fio: document.getElementById('fio').value,
+                phone: document.getElementById('phone').value,
+                address: document.getElementById('address').value,
+                email: document.getElementById('email').value,
+                product: currentItem.title
+            };
+
+            if(!customerData.fio || !customerData.phone || !customerData.address) return alert("Заполни поля!");
+
+            localStorage.setItem('pendingOrder', JSON.stringify(customerData));
+
+            const finalPrice = (parseFloat(currentItem.price) * exchangeRate).toFixed(2);
+            const returnUrl = window.location.origin + "/?payment=success";
+            
+            // УЛЬТРА-ЛЕГКАЯ ССЫЛКА (МЕНЬШЕ ПАРАМЕТРОВ = МЕНЬШЕ ОШИБОК)
+            const paypalUrl = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${encodeURIComponent(paypalEmail)}&amount=${finalPrice}&currency_code=${userCurrency}&return=${encodeURIComponent(returnUrl)}&no_shipping=1&no_note=1`;
+            
+            window.location.href = paypalUrl;
+        }
+
+        async function checkPayment() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('payment') === 'success') {
+                const savedData = JSON.parse(localStorage.getItem('pendingOrder'));
+                if (savedData) {
+                    await fetch('/order', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(savedData)
+                    });
+                    alert("Оплата прошла! Мы получили ваш заказ.");
+                    localStorage.removeItem('pendingOrder');
+                }
+                window.history.replaceState({}, document.title, "/");
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
